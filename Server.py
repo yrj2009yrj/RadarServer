@@ -6,7 +6,7 @@ from PyQt5.QtNetwork import QHostAddress
 class Server(QObject):
     new_client_signal = pyqtSignal(str)
     client_disconnected_signal = pyqtSignal(str)
-    text_message_received_signal = pyqtSignal(str)
+    text_message_received_signal = pyqtSignal(str, str)
 
     def __init__(self, address, port, parent=None):
         super(QObject, self).__init__(parent)
@@ -25,8 +25,7 @@ class Server(QObject):
         self.new_client_signal.emit(peer_address_port)
         self.client[peer_address_port] = new_client
 
-
-        # new_client.binaryMessageReceived.connect(self.client_disconnected)
+        # new_client.binaryMessageReceived.connect()
         new_client.textMessageReceived.connect(self.text_message_received)
 
         new_client.disconnected.connect(self.client_disconnected)
@@ -34,9 +33,7 @@ class Server(QObject):
     def text_message_received(self, message):
         client = self.sender()
         peer_address_port = client.peerAddress().toString() + ":" + str(client.peerPort())
-        self.text_message_received_signal.emit(peer_address_port + " " + message)
-
-
+        self.text_message_received_signal.emit(peer_address_port, message)
 
     def client_disconnected(self):
         client = self.sender()

@@ -1,0 +1,211 @@
+syntax = "proto3";
+package com.caspe.devicemanagement.util;
+
+option java_outer_classname = "Sd";
+
+// 已就绪data对象
+message Ready {
+  string currentMode = 1;
+  float lon = 2;
+  float lat = 3;
+}
+
+// 发送设备详细日志data对象
+message DetailLog {
+  string logContent = 1;
+  string createTime = 2;
+}
+
+// 发送采集指令data对象
+message Collect {
+  string collectMode = 1;
+  string northAngle = 2;
+  int32 pulseCount =3;
+  float pointDistance = 4;
+  StopCondition stopCondition = 5;
+  repeated PartList partLists = 6; 
+  message StopCondition {
+		string counts = 1;
+  }
+  message PartList {
+		string hAngle = 1;
+		string vAngle = 2;
+		string sAngle = 3;
+		string eAngle = 4;
+		string iAngle = 5;
+		string interval = 6;
+		string scanning = 7;
+		StopCondition stopCondtion = 8;	
+  }
+}
+
+// 公共：当前采集周期信息
+message ProcessInfo {
+	string mode = 1;
+  string processId = 2;
+  string sAngle = 3;
+  string eAngle = 4; 
+}
+
+// 回复采集指令data对象
+message CollectReply {
+  ProcessInfo process = 1; 
+}
+
+// 回复停止采集指令data对象
+message SuspendReply {
+  string hAngle = 3;
+  string vAngle = 4; 
+}
+
+// 周期扫描完成data对象
+message CollectComplete {
+	ProcessInfo process = 1;
+	string reason = 2;
+}
+
+// 设备状态上报
+message StatusReport {
+	message Status {
+		string name = 1;
+		string value =2;
+		string error = 3;
+	}
+	repeated Status status = 1;
+}
+
+// 算法参数同步
+message Alg {
+	string extinAlgorithmType = 1;
+	string fixCloudyExtin = 2;
+	float cloudExtThresh = 3;
+	string fixReferHeight = 4;
+	string denoisingExtin = 5;
+	string signalSplicing = 6;
+	float snrThreshExtin = 7;
+	float refHeight532 = 8;
+	float depolFactor = 9;
+	string denoising = 10;
+	float snrThreshDepol = 11;
+	string echoDefault = 12;
+	float echoStart = 13;
+	float echoEnd = 14;
+	string smooth = 15;
+	int32 smoothTimes = 16;
+	int32 windowLength = 17;
+	float pm10RatioA = 18;
+	float pm10RatioB = 19;
+	float pm10RatioC = 20;
+	float pm25RatioA = 21;
+	float pm25RatioB = 22;
+	float pm25RatioC = 23;
+	string visibilityDefault = 24;
+	string visibilityOutCloud = 25;
+	float visibilityStartH = 26;
+	float visibilityEndH = 27;
+	string aodDefault = 28;
+	string aodOutCloud = 29;
+	float aodStartLimit = 30;
+	float aodEndLimit = 31;
+	string overlapCorrect = 32;
+	float extinCoea = 33;
+	float extinCoeb = 34;
+	int32 removePoint = 35;
+	float emptyDistance = 36;
+}
+
+// 设备告警信息
+message AlarmList {
+	message Alarm {
+		string level = 1;
+		string categoryName = 2;
+		string desc = 3;
+		string alarmTime = 4;
+	}
+	repeated Alarm alarm = 1;
+}
+
+// 采集信号波数据
+message Signal {
+	message Channel {
+		string channelName = 1;
+		int32 pointCount = 2;
+		float spaceResolution = 3;
+		int32 waveLength = 4;
+		int32 adcBit = 5;
+		int32 pulseCount = 6;
+		repeated int64 data = 7;
+	}
+	repeated Channel channels = 1;
+}
+
+// 系统参数同步
+message SysParam {
+	float sysPointDist = 1;
+	int32 sysPulseCount = 2;
+	bool enableGal = 3;
+	bool enableUps = 4;
+	bool enableCompass = 5;
+	bool enableGps = 6;
+	bool enableCamera = 7;
+	bool enableYunCamera = 8;
+	bool enableHeater = 9;
+	bool enableDefog = 10;
+	bool enableVirtualGps = 11;
+	bool yunParamReset = 12;
+	string channel1 = 13;
+	string channel2 = 14;
+	string channel3 = 15;
+	string channel4 = 16;
+	string channel5 = 17;
+	string channel6 = 18;
+	string channel7 = 19;
+	string channel8 = 20;
+	int32 laserHertz = 21;
+	float laserAmpere = 22;
+	int32 galSpeed = 23;
+	string defogMode = 24;
+	string defogAutoCondition = 25;
+	float defogAutoValue = 26;
+	repeated DefogTiming defogTiming = 27;
+	string heaterMode = 28;
+	repeated HeaterTiming heaterTiming = 29;
+	float virtualGpsLon = 30;
+	float virtualGpsLat = 31;
+	bool defogHeat1 = 32;
+	bool defogHeat2 = 33;
+	bool defogHeat3 = 34;
+	
+	message DefogTiming{
+		string start = 1;
+		string end = 2;
+	}
+	message HeaterTiming{
+		string start = 1;
+		string end = 2;
+	}
+}
+
+// 最外层统一结构
+message SendData {
+	string seriaNum = 1;
+	string type = 2;
+	string action = 3;
+	string success = 4;
+	string message = 5;
+	string snCode = 6;
+	string userId = 7;
+	oneof data {
+		Ready ready = 60;
+		DetailLog detailLog = 61;
+		Collect collect = 62;
+		CollectReply collectReply = 63;
+		SuspendReply suspend = 64;
+		CollectComplete collectComplete = 65;
+		StatusReport statusReport = 66;
+		Alg alg = 67;
+		AlarmList alarmList = 68;
+		SysParam sysParam = 69;
+		Signal signal = 70;
+	}
+}

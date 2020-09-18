@@ -1,10 +1,10 @@
-from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QMainWindow
 
 from ui.MainWindow import Ui_MainWindow
 
 from Server import Server
 from MessageCtrl import MessageCtrl
+from ScanDevice import ScanDevice
 
 from protoc.SendData_pb2 import SendData, Ready
 
@@ -16,19 +16,22 @@ class MainWindow(QMainWindow):
         self.ui.setupUi(self)
         self.ui.retranslateUi(self)
 
-        self.server = Server(self.ui.leServerAddress.text(), int(self.ui.leServerPort.text()), self)
-        self.server.new_client_signal.connect(self.new_client)
-        self.server.client_disconnected_signal.connect(self.client_disconnected)
-        self.server.text_message_received_signal.connect(self.text_message_received)
+        self.ui.tabClients.setTabsClosable(True)
+        self.ui.tabClients.tabCloseRequested.connect(self.tab_close_requested)
 
+        self.scanDevice = ScanDevice()
+        self.scanDevice.new_device.connect(self.ui.lwdScanResult.addItem)
+        self.ui.cmbServiceIp.addItems(self.scanDevice.get_host_ip())
+        self.ui.cmbServiceIp.currentIndexChanged.connect(self.scanDevice.set_current_index)
+
+        self.server = Server(self.ui.cmbServiceIp.currentText(), int(self.ui.leServerPort.text()), self)
+        self.server.new_client.connect(self.new_client)
         self.ui.btnRestartServer.clicked.connect(self.restart_server)
-        self.ui.lwdClients.itemDoubleClicked.connect(self.client_double_clicked)
 
-        # key：字符串title
-        # value: 实例类MessageCtrl()
-        self.clients = {}
+        self.ui.btnScanDevice.clicked.connect(self.scan_device)
+        self.ui.lwdScanResult.itemDoubleClicked.connect(self.lwd_scan_result_double_clicked)
 
-        # itemDoubleClicked(QListWidgetItem * item)
+        self.__double_tag = None
 
         # f = open(address_book_file, "rb")
         # address_book.ParseFromString(f.read())
@@ -41,38 +44,21 @@ class MainWindow(QMainWindow):
         # abc.ParseFromString(str)
         # print(abc.currentMode)
 
-    def new_client(self, peer_address):
-        self.ui.lwdClients.addItem(peer_address)
-        print(peer_address + " Connected")
-
-    def client_disconnected(self, peer_address_port):
-        row = self.ui.lwdClients.row(self.ui.lwdClients.findItems(peer_address_port, Qt.MatchFixedString)[0])
-        self.ui.lwdClients.takeItem(row)
-        index = self.find_tab(peer_address_port)
-        self.remove_tab(index) if index >= 0 else None
-        print(peer_address_port + " Disconnected")
+    def new_client(self, client):
+        tag = self.__double_tag
+        if tag:
+            index = self.find_tab(tag)
+            if index == -1:
+                message_ctrl = MessageCtrl(client)
+                self.ui.tabClients.addTab(message_ctrl, self.__double_tag)
+            else:
+                message_ctrl = self.ui.tabClients.widget(index)
+                message_ctrl.set_new_client(client)
+            self.__double_tag = None
 
     def restart_server(self):
-        self.server.restart_server(self.ui.leServerAddress.text(), int(self.ui.leServerPort.text()))
-
-    def text_message_received(self, peer_address_port, message):
-        if peer_address_port in self.clients.keys():
-            self.clients[peer_address_port].append(peer_address_port + " " + message)
-
-    def client_double_clicked(self, item):
-        title = item.text()
-        index = self.find_tab(title)
-
-        # 发现就删除
-        if index >= 0:
-            self.ui.tabClients.removeTab(index)
-            del self.clients[title]
-            return
-
-        # 没发现就增加
-        message_ctrl = MessageCtrl()
-        self.clients[title] = message_ctrl
-        self.ui.tabClients.addTab(message_ctrl, title)
+        self.clear_result()
+        self.server.restart_server(self.ui.cmbServiceIp.currentText(), int(self.ui.leServerPort.text()))
 
     # 找到指定title，return index，否则return -1
     def find_tab(self, title):
@@ -81,7 +67,29 @@ class MainWindow(QMainWindow):
                 return index
         return -1
 
-    def remove_tab(self, index):
-        del self.clients[self.ui.tabClients.tabText(index)]
+    def scan_device(self):
+        self.ui.lwdScanResult.clear()
+        self.scanDevice.search()
+
+    def lwd_scan_result_double_clicked(self, item):
+        tag = item.text()
+        self.__double_tag = tag
+        if self.find_tab(tag) == -1:
+            self.scanDevice.connect_device(tag.split(":")[1])
+
+    def close_tab(self, index):
+        tag = self.ui.tabClients.tabText(index)
+        self.scanDevice.disconnect_device(tag.split(":")[1])
         self.ui.tabClients.removeTab(index)
 
+    def tab_close_requested(self, index):
+        self.close_tab(index)
+
+    def clear_result(self):
+        self.ui.lwdScanResult.clear()
+        count = self.ui.tabClients.count()
+        for index in range(count):
+            self.close_tab(0)
+
+    def slot_test(self):
+        print("XXOOXXOOXXOO")

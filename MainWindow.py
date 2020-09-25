@@ -6,8 +6,6 @@ from Server import Server
 from MessageCtrl import MessageCtrl
 from ScanDevice import ScanDevice
 
-from protoc.SendData_pb2 import SendData, Ready
-
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -32,17 +30,6 @@ class MainWindow(QMainWindow):
         self.ui.lwdScanResult.itemDoubleClicked.connect(self.lwd_scan_result_double_clicked)
 
         self.__double_tag = None
-
-        # f = open(address_book_file, "rb")
-        # address_book.ParseFromString(f.read())
-
-        # ready = Ready()
-        # ready.currentMode = "xxxx"
-        # str = ready.SerializeToString()
-        # print(str)
-        # abc = Ready()
-        # abc.ParseFromString(str)
-        # print(abc.currentMode)
 
     def new_client(self, client):
         tag = self.__double_tag

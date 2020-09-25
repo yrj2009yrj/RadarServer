@@ -192,7 +192,7 @@ message SendData {
 	string type = 2;
 	string action = 3;
 	string success = 4;
-	string message = 5;
+	bytes message = 5;
 	string snCode = 6;
 	string userId = 7;
 	oneof data {

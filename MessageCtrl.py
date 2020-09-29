@@ -5,6 +5,20 @@ from PyQt5.QtChart import QChart, QChartView, QLineSeries
 
 from Client import Client
 
+from ui.ControlTab import Ui_ControlTab
+
+
+class ControlTab(QWidget):
+    def __init__(self):
+        super(ControlTab, self).__init__()
+        self.ui = Ui_ControlTab()
+        self.ui.setupUi(self)
+
+        self.ui.btnExecute.clicked.connect(self.execute_command)
+
+    def execute_command(self):
+        print("GGGGGGGG")
+
 
 class ChartWidget(QWidget):
     def __init__(self, number: int, parent=None):
@@ -56,6 +70,8 @@ class MessageCtrl(QWidget):
         self.tbwShow.addTab(self.wdtTab1, "tab1")
         self.wdtTab2 = QWidget()
         self.tbwShow.addTab(self.wdtTab2, "tab2")
+        self.wdtTab3 = ControlTab()
+        self.tbwShow.addTab(self.wdtTab3, "tab3")
 
         self.tbwMessage = QTextBrowser()
         self.lblState = QLabel()

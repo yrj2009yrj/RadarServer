@@ -1,9 +1,38 @@
-from PyQt5.QtCore import pyqtSignal, QObject
+from PyQt5.QtCore import pyqtSignal, QObject, QTimer
 from PyQt5.QtWebSockets import QWebSocket
 
 from protoc.SendData_pb2 import SendData
 
 import uuid
+
+
+class Timer(QTimer):
+    def __init__(self, data: SendData, parent=None):
+        super(Timer, self).__init__(parent)
+        self.data = data
+
+    @property
+    def serial(self):
+        return self.data.seriaNum
+
+
+class ReplyTrack(QObject):
+    def __init__(self, parent=None):
+        super(ReplyTrack, self).__init__(parent)
+        self.timer = {}
+
+    def add_track(self, data: SendData):
+        timer = Timer(data)
+        timer.timeout.connect(self.track_timeout)
+        self.timer[data.seriaNum] = timer
+        timer.start(5000)
+
+    def remove_track(self, serial):
+        del self.timer[serial]
+
+    def track_timeout(self):
+        timer = self.sender()
+        print("存在未回复的序列: ", timer.serial)
 
 
 class Client(QObject):
@@ -17,7 +46,7 @@ class Client(QObject):
 
         self.keepAliveId = self.startTimer(5000)
 
-        self.serialTrack = []
+        self.replyTrack = ReplyTrack()
 
     def send_keep_alive(self):
         data = SendData()
@@ -26,7 +55,7 @@ class Client(QObject):
         data.action = "connection_check"
         s = data.SerializeToString()
         if self.socket.sendBinaryMessage(s) == len(s):
-            self.serialTrack.append(data.seriaNum)
+            self.replyTrack.add_track(data)
         else:
             print("Send Data Error: ", data.seriaNum)
 
@@ -44,23 +73,18 @@ class Client(QObject):
         s = data.SerializeToString()
         if self.socket.sendBinaryMessage(s) != len(s):
             print("Send Data Error: ", data.seriaNum)
-        pass
 
     def handle_binary_message(self, message):
         data = SendData()
         data.ParseFromString(message)
 
-        print(data.seriaNum, data.type, data.action, data.success, data.message.decode('utf8'))
+        print("收到: ", data.seriaNum, data.type, data.action, data.success, data.message.decode('utf8'))
 
+        # 执行从client接收到的内容，并响应
         if data.HasField("ready") and data.type == "action" and data.action == "ready":
             self.messageReceived.emit(data.ready.currentMode + " " + str(data.ready.lon) + " " + str(data.ready.lat))
             self.reply_online(data)
+        # 否则处理客户端响应服务端的内容
         else:
             self.messageReceived.emit(data.message.decode('utf8'))
-
-        self.serialTrack.remove(data.seriaNum) if data.seriaNum in self.serialTrack else None
-        if self.serialTrack:
-            print("存在未回复的序列: ", len(self.serialTrack))
-
-
-
+            self.replyTrack.remove_track(data.seriaNum)

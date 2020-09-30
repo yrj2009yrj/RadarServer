@@ -31,12 +31,14 @@ class MainWindow(QMainWindow):
 
         self.__double_tag = None
 
+        self.titleToClient = {}
+
     def new_client(self, client):
         tag = self.__double_tag
         if tag:
             index = self.find_tab(tag)
             if index == -1:
-                message_ctrl = MessageCtrl(client)
+                message_ctrl = MessageCtrl(client, self)
                 self.ui.tabClients.addTab(message_ctrl, self.__double_tag)
             else:
                 message_ctrl = self.ui.tabClients.widget(index)
@@ -77,6 +79,3 @@ class MainWindow(QMainWindow):
         count = self.ui.tabClients.count()
         for index in range(count):
             self.close_tab(0)
-
-    def slot_test(self):
-        print("XXOOXXOOXXOO")

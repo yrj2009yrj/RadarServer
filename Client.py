@@ -3,36 +3,31 @@ from PyQt5.QtWebSockets import QWebSocket
 
 from protoc.SendData_pb2 import SendData
 
-import uuid
-
-
-class Timer(QTimer):
-    def __init__(self, data: SendData, parent=None):
-        super(Timer, self).__init__(parent)
-        self.data = data
-
-    @property
-    def serial(self):
-        return self.data.seriaNum
+from Utils import *
 
 
 class ReplyTrack(QObject):
     def __init__(self, parent=None):
         super(ReplyTrack, self).__init__(parent)
+
         self.timer = {}
+        self.reply = {}
 
     def add_track(self, data: SendData):
-        timer = Timer(data)
-        timer.timeout.connect(self.track_timeout)
-        self.timer[data.seriaNum] = timer
-        timer.start(5000)
+        serial = data.seriaNum
+        timer_id = self.startTimer(5000)
+        self.timer[serial] = timer_id
+        self.reply[timer_id] = data
 
     def remove_track(self, serial):
+        timer_id = self.timer[serial]
+        self.killTimer(timer_id)
         del self.timer[serial]
+        del self.reply[timer_id]
 
-    def track_timeout(self):
-        timer = self.sender()
-        print("存在未回复的序列: ", timer.serial)
+    def timerEvent(self, event):
+        data = self.reply[event.timerId()]
+        print("存在未回复的序列: ", data.seriaNum)
 
 
 class Client(QObject):
@@ -50,14 +45,10 @@ class Client(QObject):
 
     def send_keep_alive(self):
         data = SendData()
-        data.seriaNum = ''.join(str(uuid.uuid4()).split('-'))
+        data.seriaNum = generate_uuid()
         data.type = "action"
         data.action = "connection_check"
-        s = data.SerializeToString()
-        if self.socket.sendBinaryMessage(s) == len(s):
-            self.replyTrack.add_track(data)
-        else:
-            print("Send Data Error: ", data.seriaNum)
+        self.send_command(data)
 
     def timerEvent(self, event):
         if event.timerId() == self.keepAliveId:
@@ -88,3 +79,10 @@ class Client(QObject):
         else:
             self.messageReceived.emit(data.message.decode('utf8'))
             self.replyTrack.remove_track(data.seriaNum)
+
+    def send_command(self, data: SendData):
+        s = data.SerializeToString()
+        if self.socket.sendBinaryMessage(s) == len(s):
+            self.replyTrack.add_track(data)
+        else:
+            print("*****     ERROR     *****: ", data.seriaNum)
